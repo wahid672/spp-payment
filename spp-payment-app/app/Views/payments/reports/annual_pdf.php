@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Annual Payment Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+        }
+        .school-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .report-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .report-period {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        .summary-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 30px;
+            background-color: #f9f9f9;
+        }
+        .summary-item {
+            margin-bottom: 10px;
+        }
+        .summary-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 200px;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+        }
+        .page-number:before {
+            content: "Page " counter(page);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="school-name">SCHOOL NAME</div>
+        <div>School Address Line 1</div>
+        <div>School Address Line 2</div>
+        <div>Phone: (123) 456-7890</div>
+    </div>
+
+    <div class="report-title">Annual Payment Report</div>
+    
+    <div class="report-period">
+        Year: <?= $year ?>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Total Payments</th>
+                <th>Total Students</th>
+                <th>Average per Student</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php 
+            $totalPayments = 0;
+            $totalStudents = 0;
+            foreach ($data as $record): 
+                $totalPayments += $record['total_success'];
+                $totalStudents = max($totalStudents, $record['total_students']);
+            ?>
+            <tr>
+                <td><?= date('F', mktime(0, 0, 0, $record['payment_month'], 1)) ?></td>
+                <td>Rp <?= number_format($record['total_success'], 0, ',', '.') ?></td>
+                <td><?= $record['total_students'] ?></td>
+                <td>Rp <?= $record['total_students'] > 0 ? 
+                    number_format($record['total_success'] / $record['total_students'], 0, ',', '.') : 
+                    0 ?></td>
+            </tr>
+            <?php endforeach; ?>
+            <tr class="total-row">
+                <td>Total</td>
+                <td>Rp <?= number_format($totalPayments, 0, ',', '.') ?></td>
+                <td><?= $totalStudents ?></td>
+                <td>Rp <?= $totalStudents > 0 ? 
+                    number_format($totalPayments / $totalStudents, 0, ',', '.') : 
+                    0 ?></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="summary-box">
+        <div class="summary-item">
+            <span class="summary-label">Total Annual Revenue:</span>
+            <span>Rp <?= number_format($totalPayments, 0, ',', '.') ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Average Monthly Revenue:</span>
+            <span>Rp <?= number_format($totalPayments / 12, 0, ',', '.') ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Total Students:</span>
+            <span><?= $totalStudents ?> students</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Average Annual per Student:</span>
+            <span>Rp <?= $totalStudents > 0 ? 
+                number_format($totalPayments / $totalStudents, 0, ',', '.') : 
+                0 ?></span>
+        </div>
+    </div>
+
+    <div style="margin-top: 50px;">
+        <div style="float: right; text-align: center;">
+            <p>Generated on: <?= date('d F Y H:i:s') ?></p>
+            <br><br><br>
+            <p>_______________________</p>
+            <p>Finance Officer</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="page-number"></div>
+        Generated by SPP Payment System
+    </div>
+</body>
+</html>
