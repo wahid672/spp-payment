@@ -39,8 +39,20 @@ class PaymentController extends Controller
 
     public function create()
     {
-        $data['students'] = $this->studentModel->findAll();
-        return view('payments/create', $data);
+        try {
+            $data['students'] = $this->studentModel->select('students.*, users.name')
+                                                  ->join('users', 'users.id = students.user_id', 'left')
+                                                  ->findAll();
+
+            if (empty($data['students'])) {
+                $data['students'] = [];
+            }
+
+            return view('payments/create', $data);
+        } catch (\Exception $e) {
+            log_message('error', '[Payments] Error loading create form: ' . $e->getMessage());
+            return redirect()->to('/payments')->with('error', 'Error loading payment form');
+        }
     }
 
     public function store()
@@ -127,16 +139,38 @@ class PaymentController extends Controller
 
     public function unpaidStudents()
     {
-        $month = $this->request->getGet('month') ?? date('n');
-        $year = $this->request->getGet('year') ?? date('Y');
+        try {
+            $month = $this->request->getGet('month') ?? date('n');
+            $year = $this->request->getGet('year') ?? date('Y');
 
-        $data = [
-            'students' => $this->paymentModel->getUnpaidStudents($month, $year),
-            'month' => $month,
-            'year' => $year
-        ];
+            // Get unpaid students with user data
+            $students = $this->paymentModel->getUnpaidStudents($month, $year);
+            
+            if (!is_array($students)) {
+                $students = [];
+            }
 
-        return view('payments/unpaid_students', $data);
+            // Get student names from users table
+            $studentModel = new \App\Models\StudentModel();
+            $students = array_map(function($student) use ($studentModel) {
+                $studentData = $studentModel->select('students.*, users.name')
+                                         ->join('users', 'users.id = students.user_id', 'left')
+                                         ->where('students.id', $student['id'])
+                                         ->first();
+                return array_merge($student, $studentData ?? []);
+            }, $students);
+
+            $data = [
+                'students' => $students,
+                'month' => $month,
+                'year' => $year
+            ];
+
+            return view('payments/unpaid_students', $data);
+        } catch (\Exception $e) {
+            log_message('error', '[Payments] Error loading unpaid students: ' . $e->getMessage());
+            return redirect()->to('/payments')->with('error', 'Error loading unpaid students list');
+        }
     }
 
     public function exportReport($type)

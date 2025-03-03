@@ -352,7 +352,7 @@ class StudentController extends Controller
 
                 // Format SPP Amount as currency
                 $sheet->getStyle('E' . $row)->getNumberFormat()
-                      ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_CURRENCY_IDR_SIMPLE);
+                      ->setFormatCode('#,##0');
                 
                 $row++;
             }

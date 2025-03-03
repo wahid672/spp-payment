@@ -83,11 +83,11 @@
                     <tbody>
                         <?php foreach ($students as $student): ?>
                         <tr>
-                            <td><?= $student['name'] ?></td>
-                            <td><?= $student['class'] ?></td>
-                            <td><?= $student['parent_name'] ?></td>
-                            <td><?= $student['parent_phone'] ?></td>
-                            <td>Rp <?= number_format($student['spp_amount'], 0, ',', '.') ?></td>
+                            <td><?= esc($student['name'] ?? 'Unknown') ?></td>
+                            <td><?= esc($student['class'] ?? 'N/A') ?></td>
+                            <td><?= esc($student['parent_name'] ?? 'N/A') ?></td>
+                            <td><?= esc($student['parent_phone'] ?? 'N/A') ?></td>
+                            <td>Rp <?= number_format($student['spp_amount'] ?? 0, 0, ',', '.') ?></td>
                             <td>
                                 <div class="btn-group">
                                     <a href="<?= site_url('payments/create?student_id=' . $student['id']) ?>" 

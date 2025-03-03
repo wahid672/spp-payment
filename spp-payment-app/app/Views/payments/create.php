@@ -18,14 +18,15 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="<?= site_url('payments/store') ?>" method="POST">
+                <form action="<?= site_url('payments/store') ?>" method="POST">
+                    <?= csrf_field() ?>
                 <div class="mb-3">
                     <label for="student_id" class="form-label">Student</label>
                     <select name="student_id" id="student_id" class="form-select" required>
                         <option value="">Select Student</option>
                         <?php foreach ($students as $student): ?>
-                            <option value="<?= $student['id'] ?>" data-spp="<?= $student['spp_amount'] ?>">
-                                <?= $student['name'] ?> - Class <?= $student['class'] ?>
+                            <option value="<?= $student['id'] ?? '' ?>" data-spp="<?= $student['spp_amount'] ?? 0 ?>">
+                                <?= esc($student['name'] ?? 'Unknown') ?> - Class <?= esc($student['class'] ?? 'N/A') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

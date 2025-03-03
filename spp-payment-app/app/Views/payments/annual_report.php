@@ -61,12 +61,12 @@
                             $totalStudents = max($totalStudents, $data['total_students']);
                         ?>
                         <tr>
-                            <td><?= date('F', mktime(0, 0, 0, $data['payment_month'], 1)) ?></td>
-                            <td>Rp <?= number_format($data['total_success'], 0, ',', '.') ?></td>
-                            <td><?= $data['total_students'] ?></td>
-                            <td>Rp <?= $data['total_students'] > 0 ? 
-                                number_format($data['total_success'] / $data['total_students'], 0, ',', '.') : 
-                                0 ?></td>
+                            <td><?= date('F', mktime(0, 0, 0, (int)substr($data['payment_month'], 5, 2), 1)) ?></td>
+                            <td>Rp <?= number_format($data['total_success'] ?? 0, 0, ',', '.') ?></td>
+                            <td><?= $data['total_students'] ?? 0 ?></td>
+                            <td>Rp <?= ($data['total_students'] ?? 0) > 0 ?
+                                number_format(($data['total_success'] ?? 0) / ($data['total_students'] ?? 1), 0, ',', '.') :
+                                '0' ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

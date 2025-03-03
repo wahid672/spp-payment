@@ -123,25 +123,46 @@ class PaymentModel extends Model
 
     public function getUnpaidStudents($month, $year)
     {
-        $payment_month = sprintf('%04d-%02d', $year, $month);
-        
-        // Get all paid student IDs for the month
-        $paid_students = $this->select('student_id')
-                            ->where('payment_month', $payment_month)
-                            ->where('status', 'success')
-                            ->findAll();
-        
-        $paid_student_ids = array_column($paid_students, 'student_id');
-        
-        // If no payments, return all students
-        if (empty($paid_student_ids)) {
-            return $this->db->table('students')->get()->getResultArray();
-        }
+        try {
+            $payment_month = sprintf('%04d-%02d', $year, $month);
+            
+            // Get all paid student IDs for the month
+            $paid_students = $this->select('student_id')
+                                ->where('payment_month', $payment_month)
+                                ->where('status', 'success')
+                                ->findAll();
+            
+            $paid_student_ids = array_column($paid_students, 'student_id');
+            
+            // Build query for students
+            $builder = $this->db->table('students')
+                               ->select('students.*, users.name')
+                               ->join('users', 'users.id = students.user_id', 'left');
+            
+            // Add where clause for unpaid students
+            if (!empty($paid_student_ids)) {
+                $builder->whereNotIn('students.id', $paid_student_ids);
+            }
 
-        return $this->db->table('students')
-                       ->whereNotIn('id', $paid_student_ids)
-                       ->get()
-                       ->getResultArray();
+            // Get results
+            $result = $builder->get()->getResultArray();
+
+            // Add default values for null fields
+            return array_map(function($student) {
+                return [
+                    'id' => $student['id'],
+                    'name' => $student['name'] ?? 'Unknown',
+                    'class' => $student['class'] ?? 'N/A',
+                    'parent_name' => $student['parent_name'] ?? 'N/A',
+                    'parent_phone' => $student['parent_phone'] ?? 'N/A',
+                    'spp_amount' => $student['spp_amount'] ?? 0
+                ];
+            }, $result);
+
+        } catch (\Exception $e) {
+            log_message('error', '[Payment] Error getting unpaid students: ' . $e->getMessage());
+            return [];
+        }
     }
 
     public function getDashboardStats()
