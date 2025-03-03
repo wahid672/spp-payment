@@ -43,20 +43,26 @@
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($students as $student): ?>
-            <tr>
-                <td><?= $student['name'] ?></td>
-                <td><?= $student['class'] ?></td>
-                <td><?= $student['major'] ?></td>
-                <td><?= $student['spp_amount'] ?></td>
-                <td>
-                    <a href="<?= site_url('students/edit/' . $student['id']) ?>" class="btn btn-warning">Edit</a>
-                    <form action="<?= site_url('students/delete/' . $student['id']) ?>" method="POST" style="display:inline;">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                    </form>
-                </td>
-            </tr>
-            <?php endforeach; ?>
+            <?php if (!empty($students)): ?>
+                <?php foreach ($students as $student): ?>
+                <tr>
+                    <td><?= esc($student['name'] ?? 'N/A') ?></td>
+                    <td><?= esc($student['class'] ?? 'N/A') ?></td>
+                    <td><?= esc($student['major'] ?? 'N/A') ?></td>
+                    <td>Rp <?= number_format($student['spp_amount'] ?? 0, 0, ',', '.') ?></td>
+                    <td>
+                        <a href="<?= site_url('students/edit/' . ($student['id'] ?? '')) ?>" class="btn btn-warning">Edit</a>
+                        <form action="<?= site_url('students/delete/' . ($student['id'] ?? '')) ?>" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this student?');">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="5" class="text-center">No students found</td>
+                </tr>
+            <?php endif; ?>
         </tbody>
     </table>
 </div>

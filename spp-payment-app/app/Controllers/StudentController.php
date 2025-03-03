@@ -19,79 +19,209 @@ class StudentController extends Controller
 
     public function index()
     {
-        $data['students'] = $this->studentModel->findAll();
-        return view('students/index', $data);
+        try {
+            $data['students'] = $this->studentModel->select('students.*, users.name')
+                                                  ->join('users', 'users.id = students.user_id', 'left')
+                                                  ->findAll();
+
+            if (empty($data['students'])) {
+                $data['students'] = [];
+            }
+
+            return view('students/index', $data);
+        } catch (\Exception $e) {
+            log_message('error', '[Students] Error loading students: ' . $e->getMessage());
+            return view('students/index', ['students' => []]);
+        }
     }
 
     public function create()
     {
-        return view('students/create');
+        try {
+            return view('students/create');
+        } catch (\Exception $e) {
+            log_message('error', '[Students] Error loading create form: ' . $e->getMessage());
+            return redirect()->to('/students')->with('error', 'Error loading create form');
+        }
     }
 
     public function store()
     {
-        $rules = [
-            'name' => 'required',
-            'class' => 'required',
-            'major' => 'required',
-            'spp_amount' => 'required|numeric',
-            'parent_name' => 'required',
-            'parent_phone' => 'required'
-        ];
+        try {
+            $rules = [
+                'name' => 'required|min_length[3]|max_length[100]',
+                'class' => 'required|max_length[10]',
+                'major' => 'required|max_length[50]',
+                'spp_amount' => 'required|numeric|greater_than[0]',
+                'parent_name' => 'required|min_length[3]|max_length[100]',
+                'parent_phone' => 'required|min_length[10]|max_length[20]'
+            ];
 
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            if (!$this->validate($rules)) {
+                return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            }
+
+            $this->db->transStart();
+
+            // Create user account for student
+            $userModel = new \App\Models\UserModel();
+            $userData = [
+                'name' => $this->request->getPost('name'),
+                'username' => 'S' . date('Ymd') . rand(1000, 9999),
+                'email' => null,
+                'password' => password_hash('student123', PASSWORD_DEFAULT),
+                'role' => 'siswa',
+                'phone' => $this->request->getPost('parent_phone'),
+            ];
+
+            $userId = $userModel->insert($userData);
+
+            if (!$userId) {
+                throw new \Exception('Failed to create user account');
+            }
+
+            // Create student record
+            $studentData = [
+                'user_id' => $userId,
+                'nis' => 'S' . date('Ymd') . rand(1000, 9999),
+                'class' => $this->request->getPost('class'),
+                'major' => $this->request->getPost('major'),
+                'spp_amount' => $this->request->getPost('spp_amount'),
+                'parent_name' => $this->request->getPost('parent_name'),
+                'parent_phone' => $this->request->getPost('parent_phone'),
+            ];
+
+            if (!$this->studentModel->insert($studentData)) {
+                throw new \Exception('Failed to create student record');
+            }
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception('Failed to create student');
+            }
+
+            return redirect()->to('/students')->with('success', 'Student added successfully. Default password: student123');
+
+        } catch (\Exception $e) {
+            log_message('error', '[Students] Error creating student: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error creating student: ' . $e->getMessage());
         }
-
-        $this->studentModel->save([
-            'name' => $this->request->getPost('name'),
-            'class' => $this->request->getPost('class'),
-            'major' => $this->request->getPost('major'),
-            'spp_amount' => $this->request->getPost('spp_amount'),
-            'parent_name' => $this->request->getPost('parent_name'),
-            'parent_phone' => $this->request->getPost('parent_phone'),
-        ]);
-
-        return redirect()->to('/students')->with('success', 'Student added successfully');
     }
 
     public function edit($id)
     {
-        $data['student'] = $this->studentModel->find($id);
-        return view('students/edit', $data);
+        try {
+            $student = $this->studentModel->select('students.*, users.name')
+                                        ->join('users', 'users.id = students.user_id')
+                                        ->where('students.id', $id)
+                                        ->first();
+
+            if (!$student) {
+                throw new \Exception('Student not found');
+            }
+
+            return view('students/edit', ['student' => $student]);
+        } catch (\Exception $e) {
+            log_message('error', '[Students] Error loading edit form: ' . $e->getMessage());
+            return redirect()->to('/students')->with('error', 'Error loading student data');
+        }
     }
 
     public function update($id)
     {
-        $rules = [
-            'name' => 'required',
-            'class' => 'required',
-            'major' => 'required',
-            'spp_amount' => 'required|numeric',
-            'parent_name' => 'required',
-            'parent_phone' => 'required'
-        ];
+        try {
+            $rules = [
+                'name' => 'required|min_length[3]|max_length[100]',
+                'class' => 'required|max_length[10]',
+                'major' => 'required|max_length[50]',
+                'spp_amount' => 'required|numeric|greater_than[0]',
+                'parent_name' => 'required|min_length[3]|max_length[100]',
+                'parent_phone' => 'required|min_length[10]|max_length[20]'
+            ];
 
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            if (!$this->validate($rules)) {
+                return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            }
+
+            $student = $this->studentModel->find($id);
+            if (!$student) {
+                throw new \Exception('Student not found');
+            }
+
+            $this->db->transStart();
+
+            // Update user data
+            $userModel = new \App\Models\UserModel();
+            $userData = [
+                'name' => $this->request->getPost('name'),
+                'phone' => $this->request->getPost('parent_phone'),
+            ];
+
+            if (!$userModel->update($student['user_id'], $userData)) {
+                throw new \Exception('Failed to update user data');
+            }
+
+            // Update student data
+            $studentData = [
+                'class' => $this->request->getPost('class'),
+                'major' => $this->request->getPost('major'),
+                'spp_amount' => $this->request->getPost('spp_amount'),
+                'parent_name' => $this->request->getPost('parent_name'),
+                'parent_phone' => $this->request->getPost('parent_phone'),
+            ];
+
+            if (!$this->studentModel->update($id, $studentData)) {
+                throw new \Exception('Failed to update student data');
+            }
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception('Failed to update student');
+            }
+
+            return redirect()->to('/students')->with('success', 'Student updated successfully');
+
+        } catch (\Exception $e) {
+            log_message('error', '[Students] Error updating student: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error updating student: ' . $e->getMessage());
         }
-
-        $this->studentModel->update($id, [
-            'name' => $this->request->getPost('name'),
-            'class' => $this->request->getPost('class'),
-            'major' => $this->request->getPost('major'),
-            'spp_amount' => $this->request->getPost('spp_amount'),
-            'parent_name' => $this->request->getPost('parent_name'),
-            'parent_phone' => $this->request->getPost('parent_phone'),
-        ]);
-
-        return redirect()->to('/students')->with('success', 'Student updated successfully');
     }
 
     public function delete($id)
     {
-        $this->studentModel->delete($id);
-        return redirect()->to('/students')->with('success', 'Student deleted successfully');
+        try {
+            $student = $this->studentModel->find($id);
+            if (!$student) {
+                throw new \Exception('Student not found');
+            }
+
+            $this->db->transStart();
+
+            // Delete student record
+            if (!$this->studentModel->delete($id)) {
+                throw new \Exception('Failed to delete student record');
+            }
+
+            // Delete associated user account
+            $userModel = new \App\Models\UserModel();
+            if (!$userModel->delete($student['user_id'])) {
+                throw new \Exception('Failed to delete user account');
+            }
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception('Failed to delete student');
+            }
+
+            return redirect()->to('/students')->with('success', 'Student deleted successfully');
+
+        } catch (\Exception $e) {
+            log_message('error', '[Students] Error deleting student: ' . $e->getMessage());
+            return redirect()->to('/students')->with('error', 'Error deleting student: ' . $e->getMessage());
+        }
     }
 
     public function import()
