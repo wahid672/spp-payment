@@ -4,20 +4,12 @@
 
 <?= $this->section('content') ?>
 <div class="container">
-    <h1>Student Management</h1>
-    
     <div class="row mb-3">
-        <div class="col-md-6">
-            <a href="<?= site_url('students/create') ?>" class="btn btn-primary">Add Student</a>
-            <a href="<?= site_url('students/export') ?>" class="btn btn-success">Export Students</a>
+        <div class="col">
+            <h1>Student Management</h1>
         </div>
-        <div class="col-md-6">
-            <form action="<?= site_url('students/import') ?>" method="POST" enctype="multipart/form-data" class="form-inline justify-content-end">
-                <div class="input-group">
-                    <input type="file" name="student_file" class="form-control" accept=".xlsx,.xls,.csv" required>
-                    <button type="submit" class="btn btn-info">Import Students</button>
-                </div>
-            </form>
+        <div class="col text-end">
+            <a href="<?= site_url('students/create') ?>" class="btn btn-primary">Add Student</a>
         </div>
     </div>
 
@@ -32,38 +24,58 @@
             <?= session()->getFlashdata('error') ?>
         </div>
     <?php endif; ?>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Class</th>
-                <th>Major</th>
-                <th>SPP Amount</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (!empty($students)): ?>
-                <?php foreach ($students as $student): ?>
-                <tr>
-                    <td><?= esc($student['name'] ?? 'N/A') ?></td>
-                    <td><?= esc($student['class'] ?? 'N/A') ?></td>
-                    <td><?= esc($student['major'] ?? 'N/A') ?></td>
-                    <td>Rp <?= number_format($student['spp_amount'] ?? 0, 0, ',', '.') ?></td>
-                    <td>
-                        <a href="<?= site_url('students/edit/' . ($student['id'] ?? '')) ?>" class="btn btn-warning">Edit</a>
-                        <form action="<?= site_url('students/delete/' . ($student['id'] ?? '')) ?>" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this student?');">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="5" class="text-center">No students found</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>NIS</th>
+                            <th>Class</th>
+                            <th>Major</th>
+                            <th>SPP Amount</th>
+                            <th>Parent Name</th>
+                            <th>Parent Phone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($students)): ?>
+                            <?php foreach ($students as $student): ?>
+                                <tr>
+                                    <td><?= esc($student['name'] ?? 'N/A') ?></td>
+                                    <td><?= esc($student['nis'] ?? 'N/A') ?></td>
+                                    <td><?= esc($student['class'] ?? 'N/A') ?></td>
+                                    <td><?= esc($student['major'] ?? 'N/A') ?></td>
+                                    <td>Rp <?= number_format($student['spp_amount'] ?? 0, 0, ',', '.') ?></td>
+                                    <td><?= esc($student['parent_name'] ?? 'N/A') ?></td>
+                                    <td><?= esc($student['parent_phone'] ?? 'N/A') ?></td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="<?= site_url('students/edit/' . ($student['id'] ?? '')) ?>" 
+                                               class="btn btn-sm btn-warning">Edit</a>
+                                            <?= form_open('students/delete/' . ($student['id'] ?? ''), ['style' => 'display:inline']) ?>
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-danger" 
+                                                        onclick="return confirm('Are you sure you want to delete this student?');">
+                                                    Delete
+                                                </button>
+                                            <?= form_close() ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="8" class="text-center">No students found</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 <?= $this->endSection() ?>
