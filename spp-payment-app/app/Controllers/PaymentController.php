@@ -45,35 +45,53 @@ class PaymentController extends Controller
 
     public function store()
     {
-        $rules = [
-            'student_id' => 'required|numeric',
-            'amount' => 'required|numeric',
-            'payment_date' => 'required|valid_date',
-            'payment_month' => 'required',
-            'payment_year' => 'required|numeric',
-            'payment_method' => 'required',
-        ];
+        try {
+            $rules = [
+                'student_id' => 'required|numeric',
+                'amount' => 'required|numeric',
+                'payment_date' => 'required|valid_date',
+                'payment_month' => 'required|numeric|less_than_equal_to[12]|greater_than[0]',
+                'payment_year' => 'required|numeric|exact_length[4]',
+                'payment_method' => 'required',
+            ];
 
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            if (!$this->validate($rules)) {
+                return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            }
+
+            $student = $this->studentModel->find($this->request->getPost('student_id'));
+            
+            // Format payment_month as YYYY-MM
+            $payment_month = sprintf('%04d-%02d', 
+                $this->request->getPost('payment_year'),
+                $this->request->getPost('payment_month')
+            );
+
+            // Check if payment already exists for this month/year
+            $existingPayment = $this->paymentModel
+                ->where('student_id', $this->request->getPost('student_id'))
+                ->where('payment_month', $payment_month)
+                ->where('status', 'success')
+                ->first();
+
+            if ($existingPayment) {
+                return redirect()->back()->withInput()->with('error', 'Payment for this month has already been recorded');
+            }
+
+            $this->paymentModel->save([
+                'student_id' => $this->request->getPost('student_id'),
+                'amount' => $this->request->getPost('amount'),
+                'payment_date' => $this->request->getPost('payment_date'),
+                'payment_month' => $payment_month,
+                'payment_method' => $this->request->getPost('payment_method'),
+                'status' => 'success',
+                'notes' => $this->request->getPost('notes'),
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', '[Payment] Error creating payment: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'An error occurred while processing the payment');
         }
-
-        $student = $this->studentModel->find($this->request->getPost('student_id'));
-        
-        $payment_month = sprintf('%04d-%02d', 
-            $this->request->getPost('payment_year'),
-            $this->request->getPost('payment_month')
-        );
-
-        $this->paymentModel->save([
-            'student_id' => $this->request->getPost('student_id'),
-            'amount' => $this->request->getPost('amount'),
-            'payment_date' => $this->request->getPost('payment_date'),
-            'payment_month' => $payment_month,
-            'payment_method' => $this->request->getPost('payment_method'),
-            'status' => 'success',
-            'notes' => $this->request->getPost('notes'),
-        ]);
 
         // Send WhatsApp notification
         $this->sendPaymentNotification($student, $this->request->getPost('amount'));

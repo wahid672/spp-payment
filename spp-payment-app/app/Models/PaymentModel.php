@@ -13,7 +13,6 @@ class PaymentModel extends Model
         'amount',
         'payment_date',
         'payment_month',
-        'payment_year',
         'payment_method',
         'status',
         'notes',
@@ -110,7 +109,7 @@ class PaymentModel extends Model
 
         return [
             'total_today' => $this->select('SUM(amount) as total')
-                                 ->where('DATE(payment_date)', date('Y-m-d'))
+                                 ->where('date(payment_date)', date('Y-m-d'))
                                  ->where('status', 'success')
                                  ->first()['total'] ?? 0,
             'total_month' => $this->select('SUM(amount) as total')
@@ -142,9 +141,10 @@ class PaymentModel extends Model
                 $year--;
             }
 
+            $payment_month = sprintf('%04d-%02d', $year, $month);
+            
             $total = $this->select('SUM(amount) as total')
-                         ->where('payment_month', $month)
-                         ->where('payment_year', $year)
+                         ->where('payment_month', $payment_month)
                          ->where('status', 'success')
                          ->first()['total'] ?? 0;
 

@@ -112,7 +112,7 @@ class InitialDataSeeder extends Seeder
             [
                 'student_id' => $student1Profile['id'],
                 'payment_date' => date('Y-m-d'),
-                'payment_month' => date('Y-m'),
+                'payment_month' => date('Y-m'), // Already in correct YYYY-MM format
                 'amount' => 500000,
                 'payment_method' => 'cash',
                 'status' => 'success',
