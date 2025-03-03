@@ -60,12 +60,16 @@ class PaymentController extends Controller
 
         $student = $this->studentModel->find($this->request->getPost('student_id'));
         
+        $payment_month = sprintf('%04d-%02d', 
+            $this->request->getPost('payment_year'),
+            $this->request->getPost('payment_month')
+        );
+
         $this->paymentModel->save([
             'student_id' => $this->request->getPost('student_id'),
             'amount' => $this->request->getPost('amount'),
             'payment_date' => $this->request->getPost('payment_date'),
-            'payment_month' => $this->request->getPost('payment_month'),
-            'payment_year' => $this->request->getPost('payment_year'),
+            'payment_month' => $payment_month,
             'payment_method' => $this->request->getPost('payment_method'),
             'status' => 'success',
             'notes' => $this->request->getPost('notes'),

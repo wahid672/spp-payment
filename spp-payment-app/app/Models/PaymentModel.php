@@ -59,20 +59,20 @@ class PaymentModel extends Model
     public function getStudentPayments($studentId)
     {
         return $this->where('student_id', $studentId)
-                    ->orderBy('payment_year DESC, payment_month DESC')
+                    ->orderBy('payment_month DESC')
                     ->findAll();
     }
 
     public function getMonthlyReport($month, $year)
     {
+        $payment_month = sprintf('%04d-%02d', $year, $month);
         return $this->select('
                 SUM(CASE WHEN status = "success" THEN amount ELSE 0 END) as total_success,
                 SUM(CASE WHEN status = "pending" THEN amount ELSE 0 END) as total_pending,
                 SUM(CASE WHEN status = "failed" THEN amount ELSE 0 END) as total_failed,
                 COUNT(DISTINCT student_id) as total_students
             ')
-            ->where('payment_month', $month)
-            ->where('payment_year', $year)
+            ->where('payment_month', $payment_month)
             ->first();
     }
 
@@ -83,7 +83,7 @@ class PaymentModel extends Model
                 SUM(CASE WHEN status = "success" THEN amount ELSE 0 END) as total_success,
                 COUNT(DISTINCT student_id) as total_students
             ')
-            ->where('payment_year', $year)
+            ->where('substr(payment_month, 1, 4)', $year)
             ->where('status', 'success')
             ->groupBy('payment_month')
             ->orderBy('payment_month', 'ASC')
@@ -92,9 +92,9 @@ class PaymentModel extends Model
 
     public function getUnpaidStudents($month, $year)
     {
+        $payment_month = sprintf('%04d-%02d', $year, $month);
         $subquery = $this->select('student_id')
-                        ->where('payment_month', $month)
-                        ->where('payment_year', $year)
+                        ->where('payment_month', $payment_month)
                         ->where('status', 'success');
 
         return $this->db->table('students')
@@ -114,12 +114,11 @@ class PaymentModel extends Model
                                  ->where('status', 'success')
                                  ->first()['total'] ?? 0,
             'total_month' => $this->select('SUM(amount) as total')
-                                 ->where('payment_month', $currentMonth)
-                                 ->where('payment_year', $currentYear)
+                                 ->where('payment_month', date('Y-m'))
                                  ->where('status', 'success')
                                  ->first()['total'] ?? 0,
             'total_year' => $this->select('SUM(amount) as total')
-                                ->where('payment_year', $currentYear)
+                                ->where('substr(payment_month, 1, 4)', date('Y'))
                                 ->where('status', 'success')
                                 ->first()['total'] ?? 0,
             'pending_payments' => $this->select('COUNT(*) as total')
