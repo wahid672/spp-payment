@@ -5,9 +5,6 @@ namespace App\Controllers;
 use App\Models\StudentModel;
 use App\Models\UserModel;
 use CodeIgniter\Controller;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class StudentController extends BaseController
 {
@@ -71,24 +68,46 @@ class StudentController extends BaseController
 
             // Create user account
             $userModel = new UserModel();
+            
+            // Generate unique username
+            $baseUsername = 'S' . date('Ymd');
+            $counter = 1;
+            $username = $baseUsername . sprintf('%04d', $counter);
+            
+            while ($userModel->where('username', $username)->first()) {
+                $counter++;
+                $username = $baseUsername . sprintf('%04d', $counter);
+            }
+
             $userData = [
                 'name' => $this->request->getPost('name'),
-                'username' => 'S' . date('Ymd') . rand(1000, 9999),
-                'email' => null,
-                'password' => password_hash('student123', PASSWORD_DEFAULT),
+                'username' => $username,
+                'email' => '',  // Empty string instead of null
+                'password' => 'student123',  // Will be hashed by UserModel
                 'role' => 'siswa',
                 'phone' => $this->request->getPost('parent_phone'),
             ];
 
             $userId = $userModel->insert($userData);
             if (!$userId) {
-                throw new \Exception('Failed to create user account');
+                $errors = $userModel->errors();
+                throw new \Exception('Failed to create user account: ' . implode(', ', $errors));
+            }
+
+            // Generate unique NIS
+            $baseNis = 'S' . date('Ymd');
+            $counter = 1;
+            $nis = $baseNis . sprintf('%04d', $counter);
+            
+            while ($this->studentModel->where('nis', $nis)->first()) {
+                $counter++;
+                $nis = $baseNis . sprintf('%04d', $counter);
             }
 
             // Create student record
             $studentData = [
                 'user_id' => $userId,
-                'nis' => 'S' . date('Ymd') . rand(1000, 9999),
+                'nis' => $nis,
                 'class' => $this->request->getPost('class'),
                 'major' => $this->request->getPost('major'),
                 'spp_amount' => $this->request->getPost('spp_amount'),
@@ -106,7 +125,8 @@ class StudentController extends BaseController
                 throw new \Exception('Failed to create student');
             }
 
-            return redirect()->to('/students')->with('success', 'Student added successfully. Default password: student123');
+            return redirect()->to('/students')
+                           ->with('success', 'Student added successfully. Username: ' . $username . ', Password: student123');
 
         } catch (\Exception $e) {
             log_message('error', '[Students] Error creating student: ' . $e->getMessage());
