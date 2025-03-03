@@ -19,20 +19,38 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $currentMonth = date('n');
-        $currentYear = date('Y');
+        try {
+            $currentMonth = date('n');
+            $currentYear = date('Y');
 
-        $data = [
-            'stats' => $this->paymentModel->getDashboardStats(),
-            'trends' => $this->paymentModel->getPaymentTrends(6),
-            'unpaidCount' => count($this->paymentModel->getUnpaidStudents($currentMonth, $currentYear)),
-            'totalStudents' => $this->studentModel->countAll(),
-            'recentPayments' => $this->paymentModel->getFilteredPayments([
-                'limit' => 5,
-                'orderBy' => 'payment_date DESC'
-            ])
-        ];
+            $data = [
+                'stats' => $this->paymentModel->getDashboardStats(),
+                'trends' => $this->paymentModel->getPaymentTrends(6),
+                'unpaidCount' => count($this->paymentModel->getUnpaidStudents($currentMonth, $currentYear)),
+                'totalStudents' => $this->studentModel->countAll(),
+                'recentPayments' => $this->paymentModel->getFilteredPayments([
+                    'limit' => 5,
+                    'orderBy' => 'payment_date DESC'
+                ]) ?: []
+            ];
 
-        return view('dashboard/index', $data);
+            return view('dashboard/index', $data);
+        } catch (\Exception $e) {
+            log_message('error', '[Dashboard] Error loading dashboard: ' . $e->getMessage());
+            
+            // Return dashboard with empty data
+            return view('dashboard/index', [
+                'stats' => [
+                    'total_today' => 0,
+                    'total_month' => 0,
+                    'total_year' => 0,
+                    'pending_payments' => 0
+                ],
+                'trends' => [],
+                'unpaidCount' => 0,
+                'totalStudents' => 0,
+                'recentPayments' => []
+            ]);
+        }
     }
 }

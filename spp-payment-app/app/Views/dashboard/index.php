@@ -12,7 +12,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="me-3">
                             <div class="text-white-75 small">Today's Payments</div>
-                            <div class="text-lg fw-bold">Rp <?= number_format($stats['total_today'], 0, ',', '.') ?></div>
+                            <div class="text-lg fw-bold">Rp <?= number_format($stats['total_today'] ?? 0, 0, ',', '.') ?></div>
                         </div>
                         <i class="fas fa-calendar fa-2x text-white-50"></i>
                     </div>
@@ -29,7 +29,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="me-3">
                             <div class="text-white-75 small">Monthly Revenue</div>
-                            <div class="text-lg fw-bold">Rp <?= number_format($stats['total_month'], 0, ',', '.') ?></div>
+                            <div class="text-lg fw-bold">Rp <?= number_format($stats['total_month'] ?? 0, 0, ',', '.') ?></div>
                         </div>
                         <i class="fas fa-money-bill-wave fa-2x text-white-50"></i>
                     </div>
@@ -46,7 +46,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="me-3">
                             <div class="text-white-75 small">Unpaid Students</div>
-                            <div class="text-lg fw-bold"><?= $unpaidCount ?> students</div>
+                            <div class="text-lg fw-bold"><?= $unpaidCount ?? 0 ?> students</div>
                         </div>
                         <i class="fas fa-exclamation-triangle fa-2x text-white-50"></i>
                     </div>
@@ -63,7 +63,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="me-3">
                             <div class="text-white-75 small">Total Students</div>
-                            <div class="text-lg fw-bold"><?= $totalStudents ?> students</div>
+                            <div class="text-lg fw-bold"><?= $totalStudents ?? 0 ?> students</div>
                         </div>
                         <i class="fas fa-users fa-2x text-white-50"></i>
                     </div>
@@ -97,21 +97,27 @@
                 </div>
                 <div class="card-body">
                     <div class="list-group list-group-flush">
-                        <?php foreach ($recentPayments as $payment): ?>
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1"><?= $payment['student_name'] ?></h6>
-                                <small>
-                                    <?= date('d/m/Y', strtotime($payment['payment_date'])) ?>
-                                </small>
+                        <?php if (!empty($recentPayments)): ?>
+                            <?php foreach ($recentPayments as $payment): ?>
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1"><?= esc($payment['student_name'] ?? 'Unknown Student') ?></h6>
+                                        <small>
+                                            <?= date('d/m/Y', strtotime($payment['payment_date'] ?? 'now')) ?>
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">Rp <?= number_format($payment['amount'] ?? 0, 0, ',', '.') ?></p>
+                                    <small class="text-muted">
+                                        Class <?= esc($payment['class'] ?? '-') ?> - 
+                                        <?= ucfirst($payment['payment_method'] ?? 'unknown') ?>
+                                    </small>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="list-group-item text-center text-muted">
+                                No recent payments
                             </div>
-                            <p class="mb-1">Rp <?= number_format($payment['amount'], 0, ',', '.') ?></p>
-                            <small class="text-muted">
-                                Class <?= $payment['class'] ?> - 
-                                <?= ucfirst($payment['payment_method']) ?>
-                            </small>
-                        </div>
-                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -164,43 +170,50 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Payment Trends Chart
-    const trendsData = <?= json_encode($trends) ?>;
+    const trendsData = <?= json_encode($trends ?? []) ?>;
     
-    new Chart(document.getElementById('paymentTrendsChart'), {
-        type: 'line',
-        data: {
-            labels: trendsData.map(item => item.month + ' ' + item.year),
+    try {
+        const chartData = {
+            labels: Array.isArray(trendsData) ? trendsData.map(item => (item.month || 'Unknown') + ' ' + (item.year || '')) : [],
             datasets: [{
                 label: 'Monthly Revenue',
-                data: trendsData.map(item => item.total),
+                data: Array.isArray(trendsData) ? trendsData.map(item => parseFloat(item.total) || 0) : [],
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
             }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
+        };
+
+        new Chart(document.getElementById('paymentTrendsChart'), {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Payment Trends (Last 6 Months)'
+                    }
                 },
-                title: {
-                    display: true,
-                    text: 'Payment Trends (Last 6 Months)'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'Rp ' + value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rp ' + (value || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error initializing chart:', error);
+        document.getElementById('paymentTrendsChart').innerHTML = 'Error loading chart data';
+    }
 });
 </script>
 <?= $this->endSection() ?>
